@@ -1,0 +1,10 @@
+# CyberRanger Arena — local target app.
+# Spins up DVWA (Damn Vulnerable Web Application) on http://localhost:8080.
+# This is a deliberately-vulnerable practice app; keep it on localhost only.
+services:
+  dvwa:
+    image: vulnerables/web-dvwa
+    container_name: cyberranger-dvwa
+    ports:
+      - "8080:80"
+    restart: unless-stopped

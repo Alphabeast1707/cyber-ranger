@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+env/
+
+# Node
+web/node_modules/
+web/*.local
+
+# Logs & scratch
+*.log
+scratch_*
+
+# Run output (generated each session)
+runs/*.jsonl
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/

@@ -1,0 +1,12 @@
+[project]
+name = "cyberranger-arena"
+version = "0.2.0"
+description = "CyberRanger Arena — co-evolving Red vs Blue security agents against a local DVWA sandbox."
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.28",
+    "colorama>=0.4",
+    "rich>=13.0",
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+]

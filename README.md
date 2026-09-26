@@ -1,126 +1,128 @@
-# CyberRanger Arena
+# CyberRanger
 
-**Two security AIs in an arms race.** A Red agent throws real web exploits at a
-local sandboxed vulnerable app; a Blue agent tries to detect them. When Red
-gets a hit past Blue, Blue *learns a new rule*. When Blue catches Red, Red
-*mutates* its payload to evade. You watch the whole thing co-evolve live in the
-browser.
+**Red-vs-Blue Co-Evolutionary Security Research System**
 
-This is **stage 1 of 8** of a co-evolution project. No LLMs, no ML, no GPU yet —
-just honest rule-based agents behind clean seams where the learning cores plug
-in next. Every number on screen is computed from real matches; nothing is faked.
+CyberRanger is an automated, quality-diversity security testing platform featuring MAP-Elites search on the red side, continual random forest learning on the blue side, human-in-the-loop analyst triage, and a strictly isolated Docker sandbox boundary.
 
 ---
 
-## Quick start (the demo)
+## 🛡️ Core Architecture
 
-```bash
-# 1. install Python deps with uv
-uv sync
-
-# 2. start the real target app (see SETUP.md)
-docker compose up -d           # DVWA on http://localhost:8080
-
-# 3. one-time DVWA database setup (idempotent, safe to re-run)
-uv run python setup_dvwa.py    # confirms real breaches on all 4 vuln classes
-
-# 4. run the live web dashboard
-uv run python server.py         # opens http://localhost:8000 in your browser
+```
+                                  +---------------------------------------+
+                                  |         HOST ORCHESTRATOR             |
+                                  |   MAP-Elites Archive (Grid / QD)      |
+                                  |   UCB1 Mutation Bandit                |
+                                  |   Hall of Fame & Regression Suite     |
+                                  |   SQLite Store (checkpoints.db)       |
+                                  +-------------------+-------------------+
+                                                      |
+                          External LLM API (Optional) | Telemetry / Metrics
+                          [claude-sonnet-4-6]         | (metrics.jsonl)
+                                                      v
+      ====================== STRICT SANDBOX BOUNDARY ======================
+      Docker User-Defined Bridge: cyberranger_internal (internal: true)
+      No default route, zero inbound/outbound external network access.
+      ---------------------------------------------------------------------
+            |                                           |
+            v                                           v
+      +---------------+ Mirror Traffic          +---------------+
+      |  dvwa-target  |------------------------>| blue-detector |
+      | (Target App)  |                         | (ML Detector) |
+      +---------------+                         +---------------+
+      =====================================================================
 ```
 
-That's the show: a React/shadcn dashboard (in `web/`) with a Red-vs-Blue
-dominance meter, live metrics, an "arms race" chart, and a tabbed engagement
-log — **Combat**, plus attacker's-eye (**Red**) and defender's-eye (**Blue**)
-consoles. The prebuilt UI is committed to `web/dist`, so step 4 works right
-after clone without Node.
+1. **Safety Boundary (§0)**: All attack traffic is contained inside `cyberranger_internal` (`internal: true`). Targets are hardcoded to the internal Docker service name `dvwa-target`.
+2. **Quality-Diversity Search (§8)**: MAP-Elites archive partitioning the behavior space into cells indexed by `(VulnClass, InjectionPointCategory, EvasionTechnique, DetectorOutcome)`.
+3. **Adaptive Operator Bandit (§4)**: UCB1 multi-armed bandit dynamically selecting among:
+   - **Grammar mutation**: BNF-style grammar expansions parameterized by target fixtures.
+   - **Crossover**: Structural splicing of parent payload templates.
+   - **LLM semantic mutation**: Abstract structural niche proposal rendered deterministically.
+4. **Scoring (§7)**: Response-diff compromise signals (SQLi multi-row dumps, unescaped XSS tokens, command output, LFI indicators) and blue-side detection confidence.
+5. **Human Triage Portal (§9)**: Analyst review portal and REST API to promote candidate payloads to "confirmed" Red Elites.
+6. **Blue Continual Learner (§10)**: Random forest retrained on confirmed exploits with hot-reloadable model artifacts.
+7. **Hall of Fame & Regression (§11)**: Archives historical Red Elites and Blue Snapshots, continuously verifying detector stability against regression floors.
+8. **Mission Control SOC Dashboard (`triage_ui/app.py`)**: Glassmorphic operations interface with interactive MAP-Elites heatmap grid, real-time co-evolution controls, telemetry charts, and payload inspector.
 
-**No DVWA running?** It still works — the environment falls back to
-**SANDBOX (mock) mode** (clearly badged) and simulates plausible responses, so
-the demo never hard-fails in front of an audience.
+---
 
-### Rebuilding the UI (only if you change `web/src`)
+## 🚀 Quickstart
 
+### 1. Start Sandbox Environment
 ```bash
-cd web && npm install && npm run build
-# or hot-reload dev: npm run dev  (proxies /stream to the backend on :8000)
+docker compose up -d
 ```
 
-### Other ways to run it
-
+### 2. Run Test Suite
 ```bash
-uv run python coevolution.py   # same arms race, headless in the terminal
-uv run python orchestrator.py  # the original stage-1 single-round loop
-uv run python arena_tui.py     # stage-1 Rich terminal dashboard
+python3 -m pytest tests/ -v
 ```
 
-### Other ways to run it
-
+### 3. Launch Mission Control SOC Dashboard
 ```bash
-uv run python coevolution.py   # same arms race, headless in the terminal
-uv run python orchestrator.py  # the original stage-1 single-round loop
-uv run python arena_tui.py     # stage-1 Rich terminal dashboard
+python3 scripts/cyberranger_cli.py serve --port 8501
+# Open http://127.0.0.1:8501 in your browser
 ```
 
 ---
 
-## What you're watching
+## 💻 Unified CLI Usage (`scripts/cyberranger_cli.py`)
 
-Each **generation**:
+CyberRanger includes a unified command-line tool for operations:
 
-1. **Red** proposes a batch of payloads (SQLi, XSS, command injection, path
-   traversal) plus one benign probe.
-2. The **environment** (`dvwa_env.py`) fires each at its DVWA endpoint and
-   reports whether it **breached**.
-3. **Blue** (`coevo_agents.py`) tries to **detect** each with its regex ruleset.
-4. Any attack that breached *without being flagged* → **Blue learns a new rule.**
-5. **Red evolves:** the payloads that evaded Blue survive and spawn mutated
-   children (comment-injection, case-flipping, URL-encoding, vector pivots).
+```bash
+# Check sandbox status, services health, and archive telemetry
+python3 scripts/cyberranger_cli.py status
 
-Over ~20 generations you see a real arms race: Blue's detection climbs as it
-learns, then Red finds fresh evasions. The typical arc — a static Blue
-eventually gets out-evolved — is exactly the motivation for stage 2.
+# Run co-evolution generation loop
+python3 scripts/cyberranger_cli.py loop --generations 10 --resume
 
----
+# List pending triage items
+python3 scripts/cyberranger_cli.py triage list --status pending
 
-## Safety & containment
+# Confirm an exploit as a Red Elite
+python3 scripts/cyberranger_cli.py triage confirm <ITEM_ID> --note "Verified SQLi dump"
 
-This is a **sandboxed academic exercise** against a deliberately-vulnerable
-practice app (DVWA).
+# Retrain Blue Detector on confirmed exploits
+python3 scripts/cyberranger_cli.py retrain
 
-- **Everything targets `localhost` / `127.0.0.1` only. No external hosts.**
-- `dvwa_env.py` (and stage-1 `environment.py`) assert this on every request via
-  `_assert_localhost()` and raise a clear error for any non-local target.
-- Only ever expose DVWA on your local machine.
+# Run regression testing against historical Red Elites
+python3 scripts/cyberranger_cli.py regression
+
+# Launch Mission Control Web UI
+python3 scripts/cyberranger_cli.py serve --host 127.0.0.1 --port 8501
+```
 
 ---
 
-## The seams — where the smarter cores plug in next
+## 🌐 REST API Endpoints
 
-Stage 1 exists to get the *interfaces* right so later stages are drop-in:
+The FastAPI service (`triage_ui/app.py`) provides the following endpoints:
 
-- **LLM reasoning cores.** `EvolvingRedAgent.propose/evolve` and
-  `EvolvingBlueAgent.detect/learn` carry `# LLM ... plugs in here` markers.
-  Swap the mutation operators for an LLM attacker, and the regex learner for an
-  LLM that reasons about intent — the engine and dashboard don't change.
-- **RL retraining loop.** `coevolution.run()` already emits a per-generation
-  reward signal (evasion rate, detection rate, breaches). A future loop reads
-  those, updates each agent's policy, and feeds the next generation back through
-  the same engine — closing the co-evolution loop.
+| Endpoint | Method | Description |
+|---|---|---|
+| `/` | `GET` | Interactive Mission Control Web Dashboard |
+| `/api/status` | `GET` | Health status of Docker sandbox, DVWA, Blue detector, and co-evolution stats |
+| `/api/archive/matrix` | `GET` | MAP-Elites grid matrix data (Vulnerability Class × Evasion Technique) |
+| `/api/metrics` | `GET` | Historical co-evolution log entries from `metrics.jsonl` |
+| `/api/triage` | `GET` | List triage items with optional `status`, `vuln_class`, and `search` filters |
+| `/api/triage/{id}` | `GET` | Get details for a specific triage item |
+| `/api/triage/{id}` | `POST` | Submit human analyst review (`confirm`, `reject`, `duplicate`) |
+| `/api/triage/batch` | `POST` | Batch review multiple items simultaneously |
+| `/api/orchestrator/step` | `POST` | Trigger a single real-time generation step |
+| `/api/orchestrator/epoch`| `POST` | Trigger an epoch of N generations with live telemetry |
+| `/api/learning/retrain` | `POST` | Trigger Blue detector retraining on confirmed exploits |
+| `/api/learning/regression`| `POST`| Run co-evolutionary regression pass |
+| `/api/hall-of-fame` | `GET` | List historical Red Elites and Blue model snapshots |
 
 ---
 
-## Files
+## 🗄️ Persistence Schema (`checkpoints.db`)
 
-| File | Role |
-|------|------|
-| `server.py` | FastAPI + SSE server for the live web dashboard **(main demo)** |
-| `web/` | React + shadcn/Tailwind frontend (source in `web/src`, prebuilt in `web/dist`) |
-| `setup_dvwa.py` | One-command DVWA database init + live-breach verification |
-| `coevolution.py` | The generation engine / arms-race loop |
-| `coevo_agents.py` | Evolving Red & Blue agents (mutation + rule-learning seams) |
-| `payloads.py` | Attack library + mutation operators |
-| `dvwa_env.py` | Authenticated DVWA target, per-category breach heuristics, mock fallback, localhost guard |
-| `orchestrator.py` · `arena_tui.py` | Original stage-1 single-round demo + Rich TUI |
-| `red_agent.py` · `blue_agent.py` · `environment.py` · `logger.py` | Stage-1 modules |
-| `docker-compose.yml` · `SETUP.md` | Brings up DVWA + exact setup steps |
-| `pyproject.toml` · `uv.lock` | uv-managed Python dependencies |
+All runtime state persists to SQLite:
+- `checkpoints`: Generation snapshot, bandit arm weights, and population states.
+- `genomes`: Rendered payloads, templates, mutation operators, and metadata.
+- `triage_items`: Analyst review items with status transitions, reviewer notes, and timestamps.
+- `archive_cells`: MAP-Elites cells indexed by behavioral descriptors and fitness scores.
+- `hall_of_fame`: Historical Red Elites and Blue model paths for regression testing.

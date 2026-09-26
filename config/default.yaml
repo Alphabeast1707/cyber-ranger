@@ -1,0 +1,32 @@
+# config/default.yaml
+sandbox:
+  network_name: cyberranger_internal
+  target_service: dvwa-target
+  detector_service: blue-detector
+
+generation:
+  offspring_per_gen: 20
+  max_generations: 100000
+
+bandit:
+  arms: [grammar, crossover, llm_semantic]
+
+archive:
+  vuln_classes: [sqli, xss, command_injection, path_traversal, ssrf]
+  injection_point_categories: [auth_form, search, url_param, file_upload, cookie]
+  evasion_techniques: [none, encoding, case_variation, comment_injection, whitespace_substitution]
+  detector_outcomes: [undetected, flagged_low_confidence, flagged_high_confidence]
+  # total_possible_cells = product of the above list lengths
+
+learning:
+  learning_pass_interval: 50       # generations between learning passes
+  regression_floor: 0.9            # alert if blue's regression pass rate drops below this
+
+metrics:
+  metrics_interval: 10
+  scaling_check_interval: 500
+  backend: jsonlines               # or "wandb"
+
+llm:
+  model: claude-sonnet-4-6
+  max_tokens: 500

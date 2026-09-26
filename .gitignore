@@ -1,21 +1,15 @@
-# Python
 __pycache__/
 *.py[cod]
-.venv/
-env/
-
-# Node
-web/node_modules/
-web/*.local
-
-# Logs & scratch
+*$py.class
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
 *.log
-scratch_*
-
-# Run output (generated each session)
-runs/*.jsonl
-
-# OS/editor
+checkpoints.db
+metrics.jsonl
+*.joblib
 .DS_Store
-.vscode/
-.idea/
+

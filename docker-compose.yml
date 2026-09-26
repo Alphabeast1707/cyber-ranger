@@ -1,10 +1,28 @@
-# CyberRanger Arena — local target app.
-# Spins up DVWA (Damn Vulnerable Web Application) on http://localhost:8080.
-# This is a deliberately-vulnerable practice app; keep it on localhost only.
+networks:
+  cyberranger_internal:
+    name: cyberranger_internal
+    internal: true   # no route to the outside — this is the load-bearing line
+
 services:
-  dvwa:
+  dvwa-target:
     image: vulnerables/web-dvwa
-    container_name: cyberranger-dvwa
+    networks:
+      - cyberranger_internal
+    # no ports: mapping to the host in the default profile — expose only for manual debugging
+
+  blue-detector:
+    build: ./blue_detector
+    networks:
+      - cyberranger_internal
+    volumes:
+      - ./blue_detector/models:/app/models   # swapped by blue_learner after retraining
+
+  dev-proxy:
+    image: alpine/socat
     ports:
-      - "8080:80"
-    restart: unless-stopped
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:8000:8000"
+    entrypoint: ["sh", "-c", "socat TCP-LISTEN:8080,fork,reuseaddr TCP:dvwa-target:80 & socat TCP-LISTEN:8000,fork,reuseaddr TCP:blue-detector:8000 & wait"]
+    networks:
+      - default
+      - cyberranger_internal

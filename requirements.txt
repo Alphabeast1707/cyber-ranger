@@ -1,6 +1,0 @@
-# Preferred: `uv sync` (uses pyproject.toml). This file is a pip fallback.
-requests>=2.28
-colorama>=0.4
-rich>=13.0
-fastapi>=0.110
-uvicorn>=0.29
